@@ -21,7 +21,7 @@ jobs:
       matrix:
         include:
           - role: detector
-            flash_size: 8MB
+            flash_size: 16MB
           - role: gateway
             flash_size: 8MB
           - role: wired_detector
