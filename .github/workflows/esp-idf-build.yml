@@ -2,7 +2,8 @@ name: ESP-IDF Build CI
 
 on:
   push:
-ci: add V3/V4 matrix builds for detector and gateway    tags: [ "v*" ]
+    branches: [ "main" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -12,31 +13,28 @@ permissions:
   pull-requests: write
 
 jobs:
-
   build:
     name: Build ${{ matrix.role }}
     runs-on: ubuntu-latest
     container: espressif/idf:release-v6.0
     strategy:
-      fail-fast: false
       matrix:
         include:
           - role: detector_v3
-            sdkconfig: sdkconfig.detector.v3
-            flash_size: 8MB
+            sdkconfig_extra: sdkconfig.detector_v3
+            flash_size: 16MB
           - role: detector_v4
-            sdkconfig: sdkconfig.detector
+            sdkconfig_extra: sdkconfig.detector_v4
             flash_size: 16MB
           - role: gateway_v3
-            sdkconfig: sdkconfig.gateway.v3
+            sdkconfig_extra: sdkconfig.gateway_v3
             flash_size: 8MB
           - role: gateway_v4
-            sdkconfig: sdkconfig.gateway
-            flash_size: 16MB
+            sdkconfig_extra: sdkconfig.gateway_v4
+            flash_size: 8MB
           - role: wired_detector
-            sdkconfig: sdkconfig.wired_detector
+            sdkconfig_extra: sdkconfig.wired_detector
             flash_size: 16MB
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -48,8 +46,7 @@ jobs:
         run: |
           . $IDF_PATH/export.sh
           rm -rf build sdkconfig
-          env SDKCONFIG_DEFAULTS="sdkconfig.defaults;${{ matrix.sdkconfig }}" idf.py set-target esp32s3
-          idf.py build
+          env SDKCONFIG_DEFAULTS="sdkconfig.defaults;${{ matrix.sdkconfig_extra }}" idf.py set-target esp32s3 idf.py build
 
       - name: Capture size
         run: |
@@ -90,21 +87,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          CUR_DET_V3=$(stat -c %s merged_detector_v3.bin)
-          CUR_DET_V4=$(stat -c %s merged_detector_v4.bin)
-          CUR_GW_V3=$(stat -c %s merged_gateway_v3.bin)
-          CUR_GW_V4=$(stat -c %s merged_gateway_v4.bin)
-          CUR_WD=$(stat -c %s merged_wired_detector.bin)
+          REPO="${{ github.repository }}"
           R=/tmp/size_report.md
+          sign() { local v=$1; [ "$v" -gt 0 ] && echo "+${v}" || echo "${v}"; }
+
           echo "## Firmware Size Report" > "$R"
           echo "" >> "$R"
           echo "| Role | Size |" >> "$R"
           echo "|------|-----:|" >> "$R"
-          echo "| Detector V3 | $CUR_DET_V3 B |" >> "$R"
-          echo "| Detector V4 | $CUR_DET_V4 B |" >> "$R"
-          echo "| Gateway V3 | $CUR_GW_V3 B |" >> "$R"
-          echo "| Gateway V4 | $CUR_GW_V4 B |" >> "$R"
-          echo "| Wired Detector | $CUR_WD B |" >> "$R"
+          for role in detector_v3 detector_v4 gateway_v3 gateway_v4 wired_detector; do
+            SZ=$(stat -c %s merged_${role}.bin 2>/dev/null || echo 0)
+            echo "| ${role} | ${SZ} B |" >> "$R"
+          done
+          echo "" >> "$R"
+          echo "idf.py size details" >> "$R"
+          echo "" >> "$R"
+          for role in detector_v3 detector_v4 gateway_v3 gateway_v4 wired_detector; do
+            echo "**${role}:** \`$(cat size_${role}.txt 2>/dev/null || echo n/a)\`" >> "$R"
+          done
+          echo "" >> "$R"
           { echo "body<<EOF"; cat "$R"; echo "EOF"; } >> "$GITHUB_OUTPUT"
 
       - name: Comment PR with firmware sizes
@@ -143,7 +144,7 @@ jobs:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'firmware-latest' }}
           name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'Latest Firmware' }}
           generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/') }}
-          body: ${{ startsWith(github.ref, 'refs/tags/') && steps.tag_body.outputs.message || 'Pre-built firmware binaries. Flash via the [Web Flasher](https://popshark1.github.io/batear/flasher/).' }}
+          body: ${{ startsWith(github.ref, 'refs/tags/') && steps.tag_body.outputs.message || 'Pre-built firmware binaries. Flash via the [Web Flasher](https://docs.batear.io/flasher/).' }}
           prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
           make_latest: ${{ startsWith(github.ref, 'refs/tags/') }}
           files: |
