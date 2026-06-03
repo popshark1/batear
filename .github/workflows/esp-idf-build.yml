@@ -46,7 +46,8 @@ jobs:
         run: |
           . $IDF_PATH/export.sh
           rm -rf build sdkconfig
-          env SDKCONFIG_DEFAULTS="sdkconfig.defaults;${{ matrix.sdkconfig_extra }}" idf.py set-target esp32s3 idf.py build
+          env SDKCONFIG_DEFAULTS="sdkconfig.defaults;${{ matrix.sdkconfig_extra }}" idf.py set-target esp32s3
+          idf.py build
 
       - name: Capture size
         run: |
