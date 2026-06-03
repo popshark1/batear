@@ -191,6 +191,15 @@
         </select>
         <span id="versionLoading" class="loading">loading...</span>
       </div>
+      
+      <!-- Board Version Picker (V3/V4) -->
+      <div class="version-picker">
+        <label for="boardSelect">Board Version:</label>
+        <select id="boardSelect">
+          <option value="v3">Heltec V3 (8MB)</option>
+          <option value="v4">Heltec V4 (16MB)</option>
+        </select>
+      </div>
     </section>
 
     <!-- Role Tabs -->
@@ -556,6 +565,7 @@
 
     /* ---- DOM refs ---- */
     const select       = document.getElementById("versionSelect");
+    const boardSelect    = document.getElementById("boardSelect");
     const loading      = document.getElementById("versionLoading");
     const btnInstall   = document.getElementById("btnInstall");
     const installLabel = document.getElementById("installLabel");
@@ -628,8 +638,10 @@
     }
 
     function fwUrl(tag, role) {
-      return `${pageBase}firmware/${tag}/merged_${role}.bin`;
-    }
+    // Add board version suffix for detector/gateway roles
+    const boardVer = boardSelect?.value || 'v3';
+    const roleSuffix = (role === 'detector' || role === 'gateway') ? `_${boardVer}` : '';
+    return `${pageBase}firmware/${tag}/merged_${role}${roleSuffix}.bin`;    }
 
     function getValidKey() {
       const raw = inputKey.value.replace(/[:\s-]/g, "");
@@ -836,6 +848,7 @@
     });
 
     select.addEventListener("change", () => updateManifests());
+    boardSelect.addEventListener("change", () => updateManifests());
 
     /* ---- Initial setup ---- */
     updateManifests();
