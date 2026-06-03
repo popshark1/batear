@@ -610,6 +610,11 @@
       cfgPanels.forEach(p => p.classList.toggle("active", p.dataset.role === role));
       // Wired Detector does not transmit over LoRa — hide the AES key field.
       networkKeyPanel.style.display = (role === "wired_detector") ? "none" : "";
+          // Hide board version selector for wired_detector (only uses one firmware)
+    const boardVersionPicker = boardSelect.closest('.version-picker');
+    if (boardVersionPicker) {
+      boardVersionPicker.style.display = (role === "wired_detector") ? "none" : "";
+    }
       installLabel.textContent = `Install ${ROLE_LABELS[role]}`;
       validateAndUpdate();
     }
