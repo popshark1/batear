@@ -88,23 +88,43 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          ROLES="detector_v3 detector_v4 gateway_v3 gateway_v4 wired_detector"
+          REPO="${{ github.repository }}"
           R=/tmp/size_report.md
+          sign() { local v=$1; [ "$v" -gt 0 ] && echo "+${v}" || echo "${v}"; }
+
           echo "## Firmware Size Report" > "$R"
           echo "" >> "$R"
-          echo "| Role | Size |" >> "$R"
-          echo "|------|-----:|" >> "$R"
-          for role in detector_v3 detector_v4 gateway_v3 gateway_v4 wired_detector; do
-            SZ=$(stat -c %s merged_${role}.bin 2>/dev/null || echo 0)
-            echo "| ${role} | ${SZ} B |" >> "$R"
+          echo "| Role | Current | Previous | Delta |" >> "$R"
+          echo "|------|--------:|---------:|------:|" >> "$R"
+          for role in $ROLES; do
+            # A missing artifact means the build job dropped a binary — fail loudly.
+            CUR=$(stat -c %s "merged_${role}.bin")
+            if curl -sfL -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                 "https://github.com/${REPO}/releases/download/firmware-latest/merged_${role}.bin" \
+                 -o "/tmp/prev_${role}.bin"; then
+              PREV=$(stat -c %s "/tmp/prev_${role}.bin")
+              echo "| ${role} | ${CUR} B | ${PREV} B | $(sign $((CUR - PREV))) B |" >> "$R"
+            else
+              echo "| ${role} | ${CUR} B | — | new |" >> "$R"
+            fi
           done
           echo "" >> "$R"
-          echo "### idf.py size details" >> "$R"
+          echo "> Compared against [\`firmware-latest\`](https://github.com/${REPO}/releases/tag/firmware-latest)." >> "$R"
           echo "" >> "$R"
-          for role in detector_v3 detector_v4 gateway_v3 gateway_v4 wired_detector; do
-            echo "**${role}:** \`$(cat size_${role}.txt 2>/dev/null || echo n/a)\`" >> "$R"
+          echo "<details><summary>idf.py size details</summary>" >> "$R"
+          echo "" >> "$R"
+          for role in $ROLES; do
+            echo "**${role}:** \`$(cat size_${role}.txt)\`" >> "$R"
           done
           echo "" >> "$R"
-          { echo "body<<EOF"; cat "$R"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+          echo "</details>" >> "$R"
+          {
+            echo "body<<ENDOFBODY"
+            cat "$R"
+            echo "ENDOFBODY"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Comment PR with firmware sizes
         uses: thollander/actions-comment-pull-request@v3
@@ -128,7 +148,11 @@ jobs:
         id: tag_body
         run: |
           TAG_MSG=$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME")
-          { echo "message<<EOF"; echo "$TAG_MSG"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+          {
+            echo "message<<ENDOFTAG"
+            echo "$TAG_MSG"
+            echo "ENDOFTAG"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Download firmware
         uses: actions/download-artifact@v4
