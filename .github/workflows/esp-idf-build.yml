@@ -120,22 +120,19 @@ jobs:
           done
           echo "" >> "$R"
           echo "</details>" >> "$R"
-          {
-            echo "body<<ENDOFBODY"
-            cat "$R"
-            echo "ENDOFBODY"
-          } >> "$GITHUB_OUTPUT"
+          # Hand the report and PR number off to the pr-size-comment workflow,
+          # which runs in the base-repo context and can comment on fork PRs
+          # (the fork-PR GITHUB_TOKEN here is read-only and cannot post).
+          cp "$R" size_report.md
+          echo "${{ github.event.pull_request.number }}" > pr_number.txt
 
-      - name: Comment PR with firmware sizes
-        # Fork PRs run with a read-only GITHUB_TOKEN, so commenting is not
-        # permitted — skip there (the table is still in the job log) and only
-        # post for same-repo PRs. continue-on-error keeps a transient API
-        # failure from reddening the whole check.
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        continue-on-error: true
-        uses: thollander/actions-comment-pull-request@v3
+      - name: Upload size report
+        uses: actions/upload-artifact@v4
         with:
-          message: ${{ steps.size_report.outputs.body }}
+          name: size-report
+          path: |
+            size_report.md
+            pr_number.txt
 
   release:
     name: Publish Firmware
