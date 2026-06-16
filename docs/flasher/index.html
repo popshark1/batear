@@ -230,7 +230,8 @@
         </div>
       </div>
       <div class="role-info-panel" data-role="gateway">
-          <span>Heltec WiFi LoRa 32 V3 / V4</span>        <div class="specs">
+        <p>Receives encrypted LoRa alerts from detectors, displays status on OLED, and forwards events to Home Assistant via MQTT over Wi-Fi.</p>
+        <div class="specs">
           <span>LoRa RX (SX1262)</span>
           <span>SSD1306 OLED</span>
           <span>MQTT + HA Discovery</span>
@@ -238,7 +239,8 @@
         </div>
       </div>
       <div class="role-info-panel" data-role="wired_detector">
-          <span>Heltec WiFi LoRa 32 V3 / V4</span>        <div class="specs">
+        <p>Captures audio and publishes drone alerts directly over Ethernet to an MQTT broker. No gateway required &mdash; ideal for fixed installations with PoE.</p>
+        <div class="specs">
           <span>I2S Mic + DSP</span>
           <span>W5500 Ethernet / PoE</span>
           <span>MQTT + HA Discovery</span>
@@ -437,7 +439,7 @@
           <div class="bar"></div><div class="bar"></div><div class="bar"></div>
         </div>
         <p>Harmonic frequency analysis &mdash; real drone spectrograms available at<br>
-        <a href="https://github.com/popshark1/batear-datasets" target="_blank" rel="noopener">popshark1/batear-datasets</a></p>
+        <a href="https://github.com/batear-io/batear-datasets" target="_blank" rel="noopener">batear-io/batear-datasets</a></p>
       </div>
     </section>
 
@@ -528,9 +530,9 @@
     <div class="container footer-inner">
       <span>&copy; 2026 Batear &mdash; Open-Source Acoustic Drone Detection</span>
       <div class="footer-links">
-        <a href="https://github.com/popshark1/batear" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/popshark1/batear/issues" target="_blank" rel="noopener">Issues</a>
-        <a href="https://github.com/popshark1/batear-datasets" target="_blank" rel="noopener">Datasets</a>
+        <a href="https://github.com/batear-io/batear" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/batear-io/batear/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/batear-io/batear-datasets" target="_blank" rel="noopener">Datasets</a>
       </div>
     </div>
   </footer>
@@ -542,7 +544,7 @@
       document.getElementById("notSupported").style.display = "block";
     }
 
-    const REPO = "popshark1/batear";
+    const REPO = "batear-io/batear";
     const NVS_OFFSET = 0x9000;
 
     /* ---- Role state ---- */
@@ -643,10 +645,11 @@
     }
 
     function fwUrl(tag, role) {
-    // Add board version suffix for detector/gateway roles
-    const boardVer = boardSelect?.value || 'v3';
-    const roleSuffix = (role === 'detector' || role === 'gateway') ? `_${boardVer}` : '';
-    return `${pageBase}firmware/${tag}/merged_${role}${roleSuffix}.bin`;    }
+      // Wired Detector ships a single firmware; LoRa roles carry a board-version suffix.
+      const boardVer = boardSelect?.value || 'v3';
+      const roleSuffix = (role === 'wired_detector') ? '' : `_${boardVer}`;
+      return `${pageBase}firmware/${tag}/merged_${role}${roleSuffix}.bin`;
+    }
 
     function getValidKey() {
       const raw = inputKey.value.replace(/[:\s-]/g, "");
